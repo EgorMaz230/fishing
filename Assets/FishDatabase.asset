@@ -1,0 +1,43 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 10493ed997b91954d8a3da99dde046a2, type: 3}
+  m_Name: FishDatabase
+  m_EditorClassIdentifier: 
+  allFish:
+  - fishName: "\u041F\u043B\u043E\u0442\u0432\u0430"
+    weight: 0.3
+    fishPullStrength: 12
+    fightDuration: 3.5
+    location: Lake1
+    spawnChanceWeight: 100
+    erraticMultiplier: 0
+  - fishName: "\u041A\u0430\u0440\u0430\u0441\u044C"
+    weight: 1.2
+    fishPullStrength: 18
+    fightDuration: 5
+    location: Lake1
+    spawnChanceWeight: 60
+    erraticMultiplier: 3
+  - fishName: "\u0429\u0443\u043A\u0430"
+    weight: 4.5
+    fishPullStrength: 35
+    fightDuration: 8.5
+    location: Lake1
+    spawnChanceWeight: 20
+    erraticMultiplier: 8
+  - fishName: "\u0421\u0442\u0430\u0440\u044B\u0439 \u0421\u043E\u043C"
+    weight: 25
+    fishPullStrength: 52
+    fightDuration: 14
+    location: Lake1
+    spawnChanceWeight: 5
+    erraticMultiplier: 20
