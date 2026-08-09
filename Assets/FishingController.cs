@@ -1,6 +1,6 @@
 using UnityEngine;
 using UnityEngine.UI;
-using TMPro; // Обязательно для работы с TextMeshPro
+using TMPro;
 using System.Collections;
 
 public class FishingController : MonoBehaviour
@@ -13,53 +13,85 @@ public class FishingController : MonoBehaviour
     [Header("Параметры натяжения лески")]
     public float tension = 0f; 
     public float maxTension = 100f;
-    public float playerPullSpeed = 35f; 
-    public float fishEscapeSpeed = 25f; 
+    public float playerPullSpeed = 40f; 
+
+    [Header("Прогресс поимки")]
+    public float catchProgress = 0f; 
+    private float currentFightDuration = 6f;
+    private float currentFishPull = 20f;
+    private float currentErraticMultiplier = 0f;
+    public float playerPullStrength = 25f; 
 
     [Header("UI Элементы")]
-    public TextMeshProUGUI infoText; // Ссылка на текст подсказок
-    public Slider tensionSlider;     // Ссылка на шкалу натяжения
+    public TextMeshProUGUI infoText; 
+    public Slider tensionSlider;     
+    public Slider progressSlider;    
+    public bool isEnglish = false; 
+
+    [Header("База данных всех рыб")]
+    public FishDatabase fishDatabase; 
+
+    [Header("Текущая пойманная рыба")]
+    public FishData currentHookedFish;
 
     private Coroutine waitBiteCoroutine;
     private Coroutine biteWindowCoroutine;
 
     void Start()
     {
-        // При старте прячем шкалу натяжения, так как мы еще не боремся с рыбой
         if (tensionSlider != null) tensionSlider.gameObject.SetActive(false);
-        UpdateText("Нажми ЛКМ, чтобы забросить удочку.");
+        if (progressSlider != null) progressSlider.gameObject.SetActive(false);
+        
+        UpdateText(isEnglish ? "Press LMB to cast." : "Нажми ЛКМ, чтобы забросить удочку.");
     }
 
     void Update()
     {
         if (isFighting)
         {
+            // Базовое волнообразное сопротивление
+            float basePull = currentFishPull * Mathf.Sin(Time.time * 4f) + currentFishPull; 
+            
+            // Резкие рывки (Perlin Noise создает непредсказуемые, но плавные скачки)
+            float jerkNoise = (Mathf.PerlinNoise(Time.time * 3f, 0f) - 0.5f) * 2f;
+            float erraticJerk = jerkNoise * (currentFishPull * currentErraticMultiplier);
+
+            float fishAction = basePull + erraticJerk;
+            
             if (Input.GetMouseButton(0))
             {
                 tension += playerPullSpeed * Time.deltaTime;
+                catchProgress += (120f / currentFightDuration) * Time.deltaTime; 
             }
             else
             {
-                tension -= fishEscapeSpeed * Time.deltaTime;
+                tension -= (playerPullStrength * 0.8f) * Time.deltaTime;
             }
+
+            tension += fishAction * 0.12f * Time.deltaTime;
 
             tension = Mathf.Clamp(tension, 0f, maxTension);
+            catchProgress = Mathf.Clamp(catchProgress, 0f, 100f);
             
-            // Обновляем шкалу на экране (переводим в диапазоне от 0 до 1 для слайдера Unity)
-            if (tensionSlider != null)
-            {
-                tensionSlider.value = tension / maxTension;
-            }
+            if (tensionSlider != null) tensionSlider.value = tension / maxTension;
+            if (progressSlider != null) progressSlider.value = catchProgress / 100f;
 
-            UpdateText("БОРЬБА! Натяжение: " + Mathf.Round(tension) + "%");
+            string fishNameStr = currentHookedFish != null ? currentHookedFish.fishName : "Fish";
+            float fishWeight = currentHookedFish != null ? currentHookedFish.weight : 0f;
+
+            UpdateText((isEnglish ? "FIGHT with " : "БОРЬБА с ") + fishNameStr + " (" + fishWeight + "kg)! " + Mathf.Round(catchProgress) + "%");
 
             if (tension >= maxTension)
             {
-                FailFishing("Леска порвалась! Ты слишком сильно тянул катушку.");
+                FailFishing(isEnglish ? "Line broke! Too much tension." : "Леска порвалась! Рыба оказалась слишком сильной.");
             }
             else if (tension <= 0f)
             {
-                FailFishing("Леска провисла! Рыба сорвалась из-за слабины.");
+                FailFishing(isEnglish ? "Line went slack! Fish escaped." : "Леска провисла! Рыба сорвалась.");
+            }
+            else if (catchProgress >= 100f)
+            {
+                SuccessFishing();
             }
 
             return;
@@ -88,8 +120,9 @@ public class FishingController : MonoBehaviour
         hasBite = false;
         isFighting = false;
         tension = 0f;
+        catchProgress = 0f;
         
-        UpdateText("Заброс... Ждем поклевку...");
+        UpdateText(isEnglish ? "Casting... Waiting for a bite..." : "Заброс... Ждем поклевку...");
         waitBiteCoroutine = StartCoroutine(WaitBiteRoutine());
     }
 
@@ -101,7 +134,7 @@ public class FishingController : MonoBehaviour
         if (isFishing && !hasBite && !isFighting)
         {
             hasBite = true;
-            UpdateText("КЛЮЕТ! Быстро жми ЛКМ для подсечки!");
+            UpdateText(isEnglish ? "BITE! Press LMB quickly!" : "КЛЮЕТ! Быстро жми ЛКМ для подсечки!");
             biteWindowCoroutine = StartCoroutine(BiteWindowRoutine());
         }
     }
@@ -112,7 +145,7 @@ public class FishingController : MonoBehaviour
 
         if (hasBite && !isFighting)
         {
-            FailFishing("Эх, рыба сорвалась! Ты слишком долго ждал.");
+            FailFishing(isEnglish ? "Fish got away! You waited too long." : "Эх, рыба уплыла! Ты слишком долго ждал.");
         }
     }
 
@@ -124,23 +157,36 @@ public class FishingController : MonoBehaviour
             
             hasBite = false;
             isFighting = true; 
-            tension = 50f; 
+            tension = 40f; 
+            catchProgress = 0f;
 
-            // Включаем отображение шкалы натяжения на экране
+            if (fishDatabase != null)
+            {
+                currentHookedFish = fishDatabase.GetRandomFish();
+            }
+            else
+            {
+                currentHookedFish = null;
+            }
+
+            if (currentHookedFish != null)
+            {
+                currentFishPull = currentHookedFish.fishPullStrength;
+                currentFightDuration = currentHookedFish.fightDuration;
+                currentErraticMultiplier = currentHookedFish.erraticMultiplier;
+            }
+            else
+            {
+                currentFishPull = 20f;
+                currentFightDuration = 6f;
+                currentErraticMultiplier = 0.5f;
+            }
+
             if (tensionSlider != null) tensionSlider.gameObject.SetActive(true);
+            if (progressSlider != null) progressSlider.gameObject.SetActive(true);
 
-            UpdateText("НАЧАЛАСЬ БОРЬБА! Балансируй натяжение!");
-            StartCoroutine(FightTimerRoutine());
-        }
-    }
-
-    IEnumerator FightTimerRoutine()
-    {
-        yield return new WaitForSeconds(6f);
-
-        if (isFighting)
-        {
-            SuccessFishing();
+            string fishNameStr = currentHookedFish != null ? currentHookedFish.fishName : "Fish";
+            UpdateText(isEnglish ? "HOOKED a " + fishNameStr + "!" : "ПОДСЕЧКА! Клюнул: " + fishNameStr + "!");
         }
     }
 
@@ -150,19 +196,20 @@ public class FishingController : MonoBehaviour
 
         isFishing = false;
         hasBite = false;
-        UpdateText("Ты смотал леску. Нажми ЛКМ для нового заброса.");
+        UpdateText(isEnglish ? "Line reeled in. Click to cast again." : "Ты смотал леску. Нажми ЛКМ для нового заброса.");
     }
 
     void SuccessFishing()
     {
         ResetUIState();
-        UpdateText("ПОБЕДА! Ты поймал рыбу! Нажми ЛКМ для нового заброса.");
+        string fishNameStr = currentHookedFish != null ? currentHookedFish.fishName : "Fish";
+        UpdateText(isEnglish ? "SUCCESS! Caught " + fishNameStr + "!" : "ПОБЕДА! Ты поймал: " + fishNameStr + "!");
     }
 
     void FailFishing(string reason)
     {
         ResetUIState();
-        UpdateText(reason + "\nНажми ЛКМ, чтобы попробовать снова.");
+        UpdateText(reason + (isEnglish ? "\nClick to try again." : "\nНажми ЛКМ, чтобы попробовать снова."));
     }
 
     void ResetUIState()
@@ -171,13 +218,14 @@ public class FishingController : MonoBehaviour
         isFishing = false;
         hasBite = false;
         if (tensionSlider != null) tensionSlider.gameObject.SetActive(false);
+        if (progressSlider != null) progressSlider.gameObject.SetActive(false);
     }
 
     void UpdateText(string message)
-{
-    if (infoText != null && infoText.font != null)
     {
-        infoText.text = message;
+        if (infoText != null)
+        {
+            infoText.text = message;
+        }
     }
-}
 }
