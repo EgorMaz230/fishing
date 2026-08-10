@@ -4,7 +4,14 @@ using UnityEngine;
 public class FishData
 {
     public string fishName = "Окунь";
-    public float weight = 1.0f;
+    
+    [Header("Диапазон веса (в кг)")]
+    public float minWeight = 0.5f; 
+    public float maxWeight = 1.5f; 
+
+    [Header("Экономика")]
+    public float pricePerKg = 50f; // Цена за 1 кг (чем реже рыба, тем выше число!)
+    
     public float fishPullStrength = 20f;
     public float fightDuration = 6f;
     public string location = "Lake1";

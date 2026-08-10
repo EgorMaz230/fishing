@@ -30,9 +30,13 @@ public class FishingController : MonoBehaviour
 
     [Header("База данных всех рыб")]
     public FishDatabase fishDatabase; 
+    
+    [Header("Инвентарь")]
+    public FishBag playerBag; // ССЫЛКА НА САДОК
 
     [Header("Текущая пойманная рыба")]
     public FishData currentHookedFish;
+    private float currentFishWeight; // Сюда сохраняем рандомный вес клюнувшей рыбы
 
     private Coroutine waitBiteCoroutine;
     private Coroutine biteWindowCoroutine;
@@ -49,10 +53,7 @@ public class FishingController : MonoBehaviour
     {
         if (isFighting)
         {
-            // Базовое волнообразное сопротивление
             float basePull = currentFishPull * Mathf.Sin(Time.time * 4f) + currentFishPull; 
-            
-            // Резкие рывки (Perlin Noise создает непредсказуемые, но плавные скачки)
             float jerkNoise = (Mathf.PerlinNoise(Time.time * 3f, 0f) - 0.5f) * 2f;
             float erraticJerk = jerkNoise * (currentFishPull * currentErraticMultiplier);
 
@@ -77,9 +78,9 @@ public class FishingController : MonoBehaviour
             if (progressSlider != null) progressSlider.value = catchProgress / 100f;
 
             string fishNameStr = currentHookedFish != null ? currentHookedFish.fishName : "Fish";
-            float fishWeight = currentHookedFish != null ? currentHookedFish.weight : 0f;
-
-            UpdateText((isEnglish ? "FIGHT with " : "БОРЬБА с ") + fishNameStr + " (" + fishWeight + "kg)! " + Mathf.Round(catchProgress) + "%");
+            
+            // Показываем сгенерированный вес
+            UpdateText((isEnglish ? "FIGHT with " : "БОРЬБА с ") + fishNameStr + " (" + currentFishWeight + "kg)! " + Mathf.Round(catchProgress) + "%");
 
             if (tension >= maxTension)
             {
@@ -164,22 +165,23 @@ public class FishingController : MonoBehaviour
             {
                 currentHookedFish = fishDatabase.GetRandomFish();
             }
-            else
-            {
-                currentHookedFish = null;
-            }
 
             if (currentHookedFish != null)
             {
                 currentFishPull = currentHookedFish.fishPullStrength;
                 currentFightDuration = currentHookedFish.fightDuration;
                 currentErraticMultiplier = currentHookedFish.erraticMultiplier;
+                
+                // ГЕНЕРИРУЕМ ВЕС РЫБЫ ИМЕННО ЗДЕСЬ (от min до max)
+                currentFishWeight = Random.Range(currentHookedFish.minWeight, currentHookedFish.maxWeight);
+                currentFishWeight = Mathf.Round(currentFishWeight * 100f) / 100f; // Округляем
             }
             else
             {
                 currentFishPull = 20f;
                 currentFightDuration = 6f;
                 currentErraticMultiplier = 0.5f;
+                currentFishWeight = 1.0f;
             }
 
             if (tensionSlider != null) tensionSlider.gameObject.SetActive(true);
@@ -203,7 +205,25 @@ public class FishingController : MonoBehaviour
     {
         ResetUIState();
         string fishNameStr = currentHookedFish != null ? currentHookedFish.fishName : "Fish";
-        UpdateText(isEnglish ? "SUCCESS! Caught " + fishNameStr + "!" : "ПОБЕДА! Ты поймал: " + fishNameStr + "!");
+
+        // Пытаемся положить рыбу в садок
+        if (currentHookedFish != null && playerBag != null)
+        {
+            bool isSaved = playerBag.TryAddFish(currentHookedFish, currentFishWeight);
+            
+            if (isSaved)
+            {
+                UpdateText(isEnglish ? $"SUCCESS! Caught {fishNameStr} ({currentFishWeight}kg)!" : $"ПОБЕДА! {fishNameStr} ({currentFishWeight} кг) в садке!");
+            }
+            else
+            {
+                UpdateText(isEnglish ? $"Bag is full! {fishNameStr} released." : $"САДОК ПОЛОН! {fishNameStr} ({currentFishWeight} кг) не влезла.");
+            }
+        }
+        else
+        {
+            UpdateText(isEnglish ? "SUCCESS! Caught " + fishNameStr + "!" : "ПОБЕДА! Ты поймал: " + fishNameStr + "!");
+        }
     }
 
     void FailFishing(string reason)

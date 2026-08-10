@@ -14,28 +14,36 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   allFish:
   - fishName: "\u041F\u043B\u043E\u0442\u0432\u0430"
-    weight: 0.3
+    minWeight: 0.1
+    maxWeight: 0.5
+    pricePerKg: 20
     fishPullStrength: 12
     fightDuration: 3.5
     location: Lake1
     spawnChanceWeight: 100
     erraticMultiplier: 0
   - fishName: "\u041A\u0430\u0440\u0430\u0441\u044C"
-    weight: 1.2
+    minWeight: 0.5
+    maxWeight: 1.2
+    pricePerKg: 30
     fishPullStrength: 18
     fightDuration: 5
     location: Lake1
     spawnChanceWeight: 60
     erraticMultiplier: 3
   - fishName: "\u0429\u0443\u043A\u0430"
-    weight: 4.5
+    minWeight: 3
+    maxWeight: 6
+    pricePerKg: 80
     fishPullStrength: 35
     fightDuration: 8.5
     location: Lake1
     spawnChanceWeight: 20
     erraticMultiplier: 8
   - fishName: "\u0421\u0442\u0430\u0440\u044B\u0439 \u0421\u043E\u043C"
-    weight: 25
+    minWeight: 8
+    maxWeight: 15
+    pricePerKg: 250
     fishPullStrength: 52
     fightDuration: 14
     location: Lake1
